@@ -1,8 +1,9 @@
 import logging
-from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, MessageHandler, filters, CallbackQueryHandler
 from config import BOT_TOKEN
 from database import init_db
-from handlers import State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_number_for_deletion, list_tasks_handler, help_handler, start_session_handler, receive_task_number_for_session, stop_session_handler, active_session_handler
+from handlers import State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_number_for_deletion, list_tasks_handler, help_handler, start_session_handler, receive_task_number_for_session, stop_session_handler, active_session_handler, stats_handler, handle_stats_selection
+
 # Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -13,7 +14,6 @@ logging.basicConfig(
 init_db()
 
 # Функция для запуска бота
-#Проверка на запуск в main.py
 if __name__ == '__main__':
     # Создаем объект Application и передаем ему токен бота
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -56,5 +56,8 @@ if __name__ == '__main__':
     application.add_handler(start_session_conv)
     application.add_handler(CommandHandler('stop_session', stop_session_handler))
     application.add_handler(CommandHandler('active_task', active_session_handler))
+    application.add_handler(CommandHandler('stats', stats_handler))
+    application.add_handler(CallbackQueryHandler(handle_stats_selection))
+
     # Запускаем бота
     application.run_polling()

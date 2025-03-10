@@ -1,8 +1,7 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
-from database import add_task, delete_task, get_tasks, start_session, stop_session, get_active_session
+from database import add_task, delete_task, get_tasks, start_session, stop_session, get_active_session, get_total_stat_last_7_days, get_stat_daily_day
 from enum import Enum, auto
-from emoji import emojize
 
 class State(Enum):
     WAITING_FOR_TASK_NAME = auto()  # Ожидание названия задачи
@@ -87,7 +86,7 @@ async def list_tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
     await update.message.reply_text(f"Твои задачи📋:\n{tasks_list}")
 
-#Обработчик команды help
+#Обработчик команды /help
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.message.from_user.first_name
     message_text = f'''
@@ -159,7 +158,7 @@ async def stop_session_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     else:
         await update.message.reply_text("У тебя нет активной сессии.")
 
-#Обработчик вызова активной сессии
+#Обработчик вызова активной сессии /active_session
 async def active_session_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
@@ -171,3 +170,46 @@ async def active_session_handler(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     await update.message.reply_text(f'Сейчас активна задача "{active_session["name"]}" ✅')
+
+#Обработчик команды /stats с созданием inline меню
+async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("Общая статистика за 7 дней", callback_data="total_stat_7")],
+        [InlineKeyboardButton("Среднее время за 7 дней", callback_data="avg_time_7")],
+        [InlineKeyboardButton("Статистика по дням за 7 дней", callback_data="daily_stats_7")],
+        [InlineKeyboardButton("Настроить период", callback_data="custom_period")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Выберите тип статистики:", reply_markup=reply_markup)
+
+#Обработчик вызовов сценария статистики
+async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    user_id = query.from_user.id
+
+    if query.data == "total_stat_7":
+        stats = get_total_stat_last_7_days(user_id)
+        daily_day = get_stat_daily_day(user_id)
+
+        days_info = "\n".join(
+            f"• {formatted_date}: {data['day_of_week']} ({data['active_time']})"
+            for formatted_date, data in daily_day.items()
+        )
+
+        await query.edit_message_text(
+            f"📈Статистика за последние 7 дней:\n"
+            f"Общее активное время: {stats['total_time']}\n"
+            f"Cреднее активное время: {stats['avg_time']}\n\n"
+            f"Статистика по дням:\n{days_info}"
+            )
+    # elif query.data == "avg_time_7":
+    #     stats = get_avg_time_last_7_days(user_id)
+    #     await query.edit_message_text(f"Среднее время за последние 7 дней: {stats}")
+    # elif query.data == "daily_stats_7":
+    #     stats = get_daily_stats_last_7_days(user_id)
+    #     await query.edit_message_text(f"Статистика по дням за последние 7 дней:\n{stats}")
+    # elif query.data == "custom_period":
+    #     await query.edit_message_text("Введите количество дней (например, 7, 14, 30):")
+    #     return State.WAITING_FOR_PERIOD
