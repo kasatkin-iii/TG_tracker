@@ -1,6 +1,13 @@
 import sqlite3
-from datetime import datetime
+import logging
+import locale
+from datetime import datetime, timedelta
 
+#Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 #Создание/подключение к БД
 def get_db_connections():
@@ -18,6 +25,9 @@ def get_db_connections():
 def init_db():
     conn = get_db_connections()
     cursor = conn.cursor()
+
+    #Включаем русскую локализацию для Windows, (Linux - locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
+    locale.setlocale(locale.LC_TIME, 'Russian_Russia.1251')
 
     #Создаем таблицы в БД(если они еще не созданы)
     #Таблица задач tasks
@@ -139,7 +149,6 @@ def stop_session(user_id: int):
         'time_diff': time_diff
     }  # Возвращаем с названием задачи и time_diff
 
-
 # Функция для получения активной сессии
 def get_active_session(user_id: int):
     conn = get_db_connections()
@@ -155,3 +164,185 @@ def get_active_session(user_id: int):
     active_session = cursor.fetchone()
     conn.close()
     return active_session
+
+#Функция для преобразования секунд в удобный формат
+def seconds_to_hms(seconds):
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+#Функция для получения общего и среднего времени активности за последние 7 дней
+def get_total_stat_last_7_days(user_id: int):
+    conn = get_db_connections()
+    cursor = conn.cursor()
+
+    start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+
+    #Находим общее время за 7 дней
+    cursor.execute('''
+        SELECT SUM(strftime('%s', end_time) - strftime('%s', start_time)) AS total_time
+        FROM sessions 
+        WHERE user_id = ? AND end_time IS NOT NULL AND start_time >= ?
+        ''', (user_id, start_date))
+    result_total = cursor.fetchone()
+    conn.close()
+    if not result_total or result_total['total_time'] is None:
+        return "Нет данных"
+
+    #Находим среднее время за 7 дней
+    result_avg = result_total['total_time']/7
+
+    if not result_avg or result_avg is None:
+        return "Нет данных"
+
+    # Создаем словарь для хранения результатов
+    results = {}
+
+    # Добавляем общее время в словарь
+    total_seconds = int(result_total['total_time'])
+    results['total_time'] = (seconds_to_hms(total_seconds))
+
+    # Добавляем среднее время в словарь
+    avg_seconds = int(result_avg)
+    results['avg_time'] = (seconds_to_hms(avg_seconds))
+
+    return results
+
+#Функция нахождения активного времени за каждый из 7 дней
+def get_stat_daily_day(user_id: int):
+    conn = get_db_connections()
+    cursor = conn.cursor()
+
+    #Определяем временной диапазон (последние 7 дней)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=7)
+
+    #Запрашиваем данные из БД (группируем по дням)
+    cursor.execute('''
+        SELECT 
+            DATE(start_time) AS day, 
+            SUM(strftime('%s', end_time) - strftime('%s', start_time)) AS total_seconds
+        FROM sessions
+        WHERE user_id = ? 
+            AND end_time IS NOT NULL 
+            AND start_time >= ?
+        GROUP BY day
+        ORDER BY day DESC
+    ''', (user_id, start_date.strftime('%Y-%m-%d %H:%M:%S')))
+
+    db_results = cursor.fetchall()
+    conn.close()
+
+    #Готовим структуру для хранения данных
+    stats = {}
+    for row in db_results:
+        day = row['day']  # 'YYYY-MM-DD'
+        stats[day] = row['total_seconds'] or 0  # 0, если NULL
+
+    #Генерируем все даты за последние 7 дней (включая дни без активности)
+    date_range = [end_date.date() - timedelta(days=i) for i in range(7)]
+
+    #Формируем итоговый результат
+    result = {}
+    for date in date_range:
+        formatted_date = date.strftime('%d %b')  # '05 Jan'
+        day_of_week = date.strftime('%A')  # 'Monday'
+
+        #Получаем активное время или 0
+        active_seconds = stats.get(date.strftime('%Y-%m-%d'), 0)
+
+        result[formatted_date] = {
+            'day_of_week': day_of_week,
+            'active_time': seconds_to_hms(active_seconds)
+        }
+
+    return result
+
+#Функция для получения общего и среднего времени активности за последние 7 дней по задаче
+def get_task_stat_last_7_days(user_id: int, task_id: int):
+    conn = get_db_connections()
+    cursor = conn.cursor()
+
+    start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+
+    # Находим общее время за 7 дней
+    cursor.execute('''
+            SELECT SUM(strftime('%s', end_time) - strftime('%s', start_time)) AS total_time_task
+            FROM sessions 
+            WHERE user_id = ? AND end_time IS NOT NULL AND start_time >= ? AND task_id = ?
+            ''', (user_id, start_date, task_id))
+    result_total = cursor.fetchone()
+    conn.close()
+
+    if not result_total or result_total['total_time_task'] is None:
+        return "Нет данных"
+
+    # Находим среднее время за 7 дней
+    result_avg_task = result_total['total_time_task'] / 7
+
+    if not result_avg_task or result_avg_task is None:
+        return "Нет данных"
+
+    # Создаем словарь для хранения результатов
+    results = {}
+
+    # Добавляем общее время в словарь
+    total_seconds = int(result_total['total_time_task'])
+    results['total_time_task'] = (seconds_to_hms(total_seconds))
+
+    # Добавляем среднее время в словарь
+    avg_seconds = int(result_avg_task)
+    results['avg_time_task'] = (seconds_to_hms(avg_seconds))
+
+    return results
+
+#Функция нахождения активного времени по задаче за каждый из 7 дней
+def get_stat_task_daily_day(user_id: int, task_id: int):
+    conn = get_db_connections()
+    cursor = conn.cursor()
+
+    #Определяем временной диапазон (последние 7 дней)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=7)
+
+    #Запрашиваем данные из БД (группируем по дням)
+    cursor.execute('''
+        SELECT 
+            DATE(start_time) AS day, 
+            SUM(strftime('%s', end_time) - strftime('%s', start_time)) AS total_seconds
+        FROM sessions
+        WHERE user_id = ? 
+            AND end_time IS NOT NULL 
+            AND start_time >= ?
+            AND task_id = ?
+        GROUP BY day
+        ORDER BY day DESC
+    ''', (user_id, start_date.strftime('%Y-%m-%d %H:%M:%S'), task_id))
+
+    db_results = cursor.fetchall()
+    conn.close()
+
+    #Готовим структуру для хранения данных
+    stats = {}
+    for row in db_results:
+        day = row['day']  # 'YYYY-MM-DD'
+        stats[day] = row['total_seconds'] or 0  # 0, если NULL
+
+    #Генерируем все даты за последние 7 дней (включая дни без активности)
+    date_range = [end_date.date() - timedelta(days=i) for i in range(7)]
+
+    #Формируем итоговый результат
+    result = {}
+    for date in date_range:
+        formatted_date = date.strftime('%d %b')  # '05 Jan'
+        day_of_week = date.strftime('%A')  # 'Monday'
+
+        #Получаем активное время или 0
+        active_seconds = stats.get(date.strftime('%Y-%m-%d'), 0)
+
+        result[formatted_date] = {
+            'day_of_week': day_of_week,
+            'active_time': seconds_to_hms(active_seconds)
+        }
+
+    return result
