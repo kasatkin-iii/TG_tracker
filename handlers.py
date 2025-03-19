@@ -24,7 +24,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.message.from_user.first_name
 
     # Создаем список кнопок для клавиатуры
-    keyboard = [['▶️', '⏹️', '🔄']]
+    keyboard = [['▶️', '⏹️', '🔄', '⚙️']]
 
     # Создаем replay-клавиатуру с помощью ReplyKeyboardMarkup
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -35,13 +35,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(start_message, reply_markup=reply_markup)
 
 #Обработчик команды вызова инлайн-меню
-async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
-        [InlineKeyboardButton("Добавить задачу", callback_data="command_1")],
-        [InlineKeyboardButton("Удалить задачу", callback_data="command_2")],
-        [InlineKeyboardButton("Список задач", callback_data="command_3")],
-        [InlineKeyboardButton("Статистика", callback_data="open_submenu")],
+        [InlineKeyboardButton("      Добавить задачу 🆕     ", callback_data= 'add_task')],
+        [InlineKeyboardButton("      Удалить задачу 🗑     ", callback_data='delete_task')],
+        [InlineKeyboardButton("      Список задач 📋     ", callback_data='list_tasks')],
+        [InlineKeyboardButton("      Статистика 📈     ", callback_data='stats')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -49,7 +49,11 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Обработчик команды /add_task
 async def add_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Введи название задачи:")
+    query = update.callback_query
+    await query.answer()
+
+    #Запрашиваем название задачи
+    await query.edit_message_text("Введи название задачи:")
     return State.WAITING_FOR_TASK_NAME
 
 # Обработчик ввода названия задачи
@@ -64,7 +68,10 @@ async def receive_task_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Обработчик команды /delete_task
 async def delete_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+    query = update.callback_query
+    await query.answer()
+
+    user_id = query.from_user.id
 
     # Получаем список задач
     tasks = get_tasks(user_id)
@@ -75,7 +82,7 @@ async def delete_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Формируем сообщение со списком задач
     tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
-    await update.message.reply_text(f"Твои задачи:\n{tasks_list}\nВведи номер задачи для удаления:")
+    await query.edit_message_text(f"Твои задачи:\n{tasks_list}\nВведи номер задачи для удаления:")
     return State.WAITING_FOR_TASK_NUMBER
 
 # Обработчик ввода номера задачи для удаления
@@ -104,7 +111,10 @@ async def receive_task_number_for_deletion(update: Update, context: ContextTypes
 
 # Обработчик команды /list_tasks
 async def list_tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+    query = update.callback_query
+    await query.answer()
+
+    user_id = query.from_user.id
 
     # Получаем список задач из базы данных
     tasks = get_tasks(user_id)
@@ -115,7 +125,7 @@ async def list_tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # Формируем сообщение со списком задач
     tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
-    await update.message.reply_text(f"Твои задачи📋:\n{tasks_list}")
+    await query.edit_message_text(f"Твои задачи📋:\n{tasks_list}")
 
 #Обработчик команды /help
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -204,13 +214,33 @@ async def active_session_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 #Обработчик команды /stats с созданием inline меню
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
     keyboard = [
-        [InlineKeyboardButton("Общая статистика за 7 дней", callback_data="total_stat_7")],
-        [InlineKeyboardButton("Статистика по задаче за 7 дней", callback_data="total_stat_task_7")],
-        [InlineKeyboardButton("📊 Открыть дашборд", callback_data = "open_dashboard")]
+        [InlineKeyboardButton('Общая статистика за 7 дней', callback_data='total_stat_7')],
+        [InlineKeyboardButton('Статистика по задаче за 7 дней', callback_data='total_stat_task_7')],
+        [InlineKeyboardButton('📊 Открыть дашборд', callback_data='open_dashboard')],
+        [InlineKeyboardButton('Назад', callback_data='back_menu')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Выберите тип статистики:", reply_markup=reply_markup)
+    await query.edit_message_text("Выберите тип статистики:", reply_markup=reply_markup)
+
+
+# Обработчик команды вызова инлайн-меню
+async def back_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton('      Добавить задачу 🆕     ', callback_data='add_task')],
+        [InlineKeyboardButton('      Удалить задачу 🗑     ', callback_data='delete_task')],
+        [InlineKeyboardButton('      Список задач 📋     ', callback_data='list_tasks')],
+        [InlineKeyboardButton('      Статистика 📈     ', callback_data='stats')],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text('Меню:', reply_markup=reply_markup)
 
 #Обработчик вызовов сценария статистики
 async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -235,8 +265,7 @@ async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_T
             f"Статистика по дням:\n{days_info}"
             )
 
-    elif query.data == "total_stat_task_7":
-
+    elif query.data == 'total_stat_task_7':
 
         # Получаем список задач
         tasks = get_tasks(user_id)

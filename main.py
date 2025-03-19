@@ -4,11 +4,11 @@ from telegram.ext import (
 )
 from config import BOT_TOKEN
 from database import init_db
-from handlers import(
+from handlers import (
     State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_number_for_deletion,
     list_tasks_handler, help_handler, start_session_handler, receive_task_number_for_session,
-    stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat
-)
+    stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat,
+    menu_handler, back_menu_handler)
 
 # Настройка логирования
 logging.basicConfig(
@@ -26,16 +26,20 @@ if __name__ == '__main__':
 
     # ConversationHandler для добавления задачи
     add_task_conv = ConversationHandler(
-        entry_points=[CommandHandler('add_task', add_task_handler)],
-        states={
-            State.WAITING_FOR_TASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_task_name)],
-        },
-        fallbacks=[]
+        entry_points=[CallbackQueryHandler(add_task_handler, pattern='add_task'),
+    ],
+    states={
+        State.WAITING_FOR_TASK_NAME: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, receive_task_name),
+        ],
+    },
+    fallbacks=[],
     )
 
     # ConversationHandler для удаления задачи
     delete_task_conv = ConversationHandler(
-        entry_points=[CommandHandler('delete_task', delete_task_handler)],
+        entry_points=[CallbackQueryHandler(delete_task_handler, pattern='delete_task')
+        ],
         states={
             State.WAITING_FOR_TASK_NUMBER: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_task_number_for_deletion)],
@@ -55,29 +59,31 @@ if __name__ == '__main__':
 
     # ConversationHandler для получения статистики по задаче
     stats_task_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(handle_stats_selection, pattern="^total_stat_task_7$")],
+        entry_points=[CallbackQueryHandler(handle_stats_selection, pattern='^total_stat_task_7$')],
         states={
             State.WAITING_FOR_TASK_NUMBER: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handler_task_number_stat)],
         },
         fallbacks=[],
-        name="stats_task_conv",  # Имя для логирования
+        name='stats_task_conv',  # Имя для логирования
         persistent=False,  # Сохранять состояние между перезапусками
     )
 
-    logging.info(f"ConversationHandler stats_task_conv зарегистрирован.")
+    logging.info(f'ConversationHandler stats_task_conv зарегистрирован.')
 
     # Регистрируем обработчики команд
     application.add_handler(stats_task_conv)
     application.add_handler(CommandHandler('start', start))
     application.add_handler(add_task_conv)
     application.add_handler(delete_task_conv)
-    application.add_handler(CommandHandler('list_tasks', list_tasks_handler))
+    application.add_handler(CallbackQueryHandler(list_tasks_handler, pattern='list_tasks'))
     application.add_handler(CommandHandler('help', help_handler))
     application.add_handler(start_session_conv)
+    application.add_handler(CallbackQueryHandler(stats_handler, pattern='stats'))
+    application.add_handler(CallbackQueryHandler(back_menu_handler, pattern='back_menu'))
     application.add_handler(MessageHandler(filters.Text('⏹️'), stop_session_handler))
     application.add_handler(MessageHandler(filters.Text('🔄'), active_session_handler))
-    application.add_handler(CommandHandler('stats', stats_handler))
+    application.add_handler(MessageHandler(filters.Text('⚙️'), menu_handler))
     application.add_handler(CallbackQueryHandler(handle_stats_selection))
 
     # Запускаем бота
