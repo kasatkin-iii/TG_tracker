@@ -5,10 +5,10 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from database import init_db
 from handlers import (
-    State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_number_for_deletion,
-    list_tasks_handler, help_handler, start_session_handler, receive_task_number_for_session,
+    State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_for_deletion,
+    list_tasks_handler, help_handler, start_session_handler, receive_task_for_start_session,
     stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat,
-    menu_handler, back_menu_handler)
+    menu_handler, back_menu_handler, cancel_handler, cancel_start_handler)
 
 # Настройка логирования
 logging.basicConfig(
@@ -31,6 +31,7 @@ if __name__ == '__main__':
     states={
         State.WAITING_FOR_TASK_NAME: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, receive_task_name),
+            CallbackQueryHandler(cancel_handler, pattern="cancel"),
         ],
     },
     fallbacks=[],
@@ -42,7 +43,9 @@ if __name__ == '__main__':
         ],
         states={
             State.WAITING_FOR_TASK_NUMBER: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_task_number_for_deletion)],
+                CallbackQueryHandler(receive_task_for_deletion, pattern=r"^delete_\d+$"),
+                CallbackQueryHandler(cancel_handler, pattern="cancel"),
+            ],
         },
         fallbacks=[]
     )
@@ -52,7 +55,9 @@ if __name__ == '__main__':
         entry_points=[MessageHandler(filters.Text('▶️'), start_session_handler)],
         states={
             State.WAITING_FOR_TASK_NUMBER: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_task_number_for_session)],
+                CallbackQueryHandler(receive_task_for_start_session, pattern=r"^start_\d+$"),
+                CallbackQueryHandler(cancel_start_handler, pattern="cancel_start"),
+            ],
         },
         fallbacks=[]
     )

@@ -52,8 +52,12 @@ async def add_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    #Кнопка отмена создания задачи
+    keyboard = [[InlineKeyboardButton("Отмена", callback_data="cancel")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     #Запрашиваем название задачи
-    await query.edit_message_text("Введи название задачи:")
+    await query.edit_message_text('Введи название задачи:',reply_markup=reply_markup)
     return State.WAITING_FOR_TASK_NAME
 
 # Обработчик ввода названия задачи
@@ -81,32 +85,40 @@ async def delete_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ConversationHandler.END
 
     # Формируем сообщение со списком задач
-    tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
-    await query.edit_message_text(f"Твои задачи:\n{tasks_list}\nВведи номер задачи для удаления:")
+    keyboard = [
+        [InlineKeyboardButton(task['name'], callback_data=f"delete_{task['id']}")] for task in tasks
+    ]
+    keyboard.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text('Выбери задачу для удаления:', reply_markup=reply_markup)
     return State.WAITING_FOR_TASK_NUMBER
 
 # Обработчик ввода номера задачи для удаления
-async def receive_task_number_for_deletion(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+async def receive_task_for_deletion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()  # Подтверждаем нажатие кнопки
 
-    try:
-        task_number = int(update.message.text)
-    except ValueError:
-        await update.message.reply_text("Введи номер задачи.")
-        return State.WAITING_FOR_TASK_NUMBER
-
-    # Получаем список задач
+    user_id = query.from_user.id
+    task_id = int(query.data.split("_")[1])
     tasks = get_tasks(user_id)
 
-    # Проверяем, существует ли задача с таким номером
-    if task_number < 1 or task_number > len(tasks):
-        await update.message.reply_text("Задачи с таким номером не существует.")
-        return State.WAITING_FOR_TASK_NUMBER
+    # Находим задачу по task_id
+    task = next((task for task in tasks if task["id"] == task_id), None)
 
     # Удаляем задачу
-    task_id = tasks[task_number - 1]['id']
     delete_task(user_id, task_id)
-    await update.message.reply_text(f'Задача "{tasks[task_number - 1]["name"]}" удалена!❌')
+
+    await query.edit_message_text(f'Задача "{task['name']}" удалена!❌')
+    return ConversationHandler.END
+
+#Обработчик кнопки "Отмена" для выхода из состояния ожидания данных
+async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()  # Подтверждаем нажатие кнопки
+
+    # Возвращаем пользователя в главное меню
+    await back_menu_handler(update, context)
     return ConversationHandler.END
 
 # Обработчик команды /list_tasks
@@ -123,9 +135,13 @@ async def list_tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("У тебя пока нет задач.")
         return
 
+    #Создаем кнопку "Назад для возврата к главному меню"
+    keyboard = [[InlineKeyboardButton("Назад", callback_data="back_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     # Формируем сообщение со списком задач
     tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
-    await query.edit_message_text(f"Твои задачи📋:\n{tasks_list}")
+    await query.edit_message_text(f"Твои задачи📋:\n{tasks_list}", reply_markup=reply_markup)
 
 #Обработчик команды /help
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -149,34 +165,41 @@ async def start_session_handler(update: Update, context: ContextTypes.DEFAULT_TY
         return ConversationHandler.END
 
     # Формируем сообщение со списком задач
-    tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
-    await update.message.reply_text(f"Твои задачи:\n{tasks_list}\nВведи номер задачи для запуска сессии:")
+    keyboard = [
+        [InlineKeyboardButton(task['name'], callback_data=f"start_{task['id']}")] for task in tasks
+    ]
+    keyboard.append([InlineKeyboardButton("Отмена", callback_data="cancel_start")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text('По какой задаче запустить таймер?', reply_markup=reply_markup)
     return State.WAITING_FOR_TASK_NUMBER
 
 # Обработчик ввода номера задачи для запуска сессии
-async def receive_task_number_for_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+async def receive_task_for_start_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()  # Подтверждаем нажатие кнопки
+    user_id = query.from_user.id
 
-    try:
-        task_number = int(update.message.text)
-    except ValueError:
-        await update.message.reply_text("Введи номер задачи.")
-        return State.WAITING_FOR_TASK_NUMBER
-
-    # Получаем список задач
-    tasks = get_tasks(user_id)
-
-    # Проверяем, существует ли задача с таким номером
-    if task_number < 1 or task_number > len(tasks):
-        await update.message.reply_text("Задачи с таким номером не существует.")
-        return State.WAITING_FOR_TASK_NUMBER
+    #Методом сплит и int() добываем 'id'
+    task_id = int(query.data.split("_")[1])
 
     # Запускаем сессию
-    task_id = tasks[task_number - 1]['id']
     if start_session(user_id, task_id):
-        await update.message.reply_text(f'Сессия для задачи "{tasks[task_number - 1]["name"]}" запущена!▶️')
+
+        #Находим активную сессию, для определения 'name'
+        active_session = get_active_session(user_id)
+        await query.edit_message_text(f'Сессия для задачи "{active_session["name"]}" запущена!▶️')
     else:
-        await update.message.reply_text("У тебя уже есть активная сессия.")
+        await query.edit_message_text("У тебя уже есть активная сессия.")
+    return ConversationHandler.END
+
+#Обработчик отмены запуска сессии
+async def cancel_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()  # Подтверждаем нажатие кнопки
+
+    # Возвращаем пользователя в главное меню
+    await query.edit_message_text("Запуск таймера отменен!")
     return ConversationHandler.END
 
 #Обработчик команды /stop_session
@@ -226,8 +249,7 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Выберите тип статистики:", reply_markup=reply_markup)
 
-
-# Обработчик команды вызова инлайн-меню
+# Обработчик команды возврата в главное инлайн-меню
 async def back_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
