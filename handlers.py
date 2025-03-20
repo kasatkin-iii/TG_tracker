@@ -249,7 +249,7 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Выберите тип статистики:", reply_markup=reply_markup)
 
-# Обработчик команды возврата в главное инлайн-меню
+#Обработчик команды возврата в главное инлайн-меню
 async def back_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -271,9 +271,13 @@ async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     user_id = query.from_user.id
 
-    if query.data == "total_stat_7":
+    if query.data == 'total_stat_7':
         stats = get_total_stat_last_7_days(user_id)
         daily_day = get_stat_daily_day(user_id)
+
+        # Клавиатура для кнопки назад
+        keyboard = [[InlineKeyboardButton("Назад", callback_data='stats')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
         days_info = "\n".join(
             f"• {formatted_date}: {data['day_of_week']} ({data['active_time']})"
@@ -284,7 +288,7 @@ async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_T
             f"📈Статистика за последние 7 дней:\n"
             f"Общее активное время: {stats['total_time']}\n"
             f"Cреднее активное время: {stats['avg_time']}\n\n"
-            f"Статистика по дням:\n{days_info}"
+            f"Статистика по дням:\n{days_info}",reply_markup=reply_markup
             )
 
     elif query.data == 'total_stat_task_7':
@@ -293,14 +297,18 @@ async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_T
         tasks = get_tasks(user_id)
 
         if not tasks:
-            logging.warning(f"У пользователя {user_id} нет задач.")
             await query.edit_message_text("У тебя пока нет задач.")
             return ConversationHandler.END
 
+
         # Формируем сообщение со списком задач
-        tasks_list = "\n".join([f"{i + 1}. {task['name']}" for i, task in enumerate(tasks)])
-        await query.edit_message_text(f"Твои задачи:\n{tasks_list}\nВведи номер задачи для получения статистики:")
-        logging.info(f"Переход в состояние WAITING_FOR_TASK_NUMBER для пользователя {user_id}")
+        keyboard = [
+            [InlineKeyboardButton(task['name'], callback_data=f"stat_{task['id']}")] for task in tasks
+        ]
+        keyboard.append([InlineKeyboardButton("Отмена", callback_data="stat")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(f"Для какой задачи вывести статистику?", reply_markup=reply_markup)
         return State.WAITING_FOR_TASK_NUMBER
 
     elif query.data == "open_dashboard":
@@ -340,30 +348,21 @@ async def _handle_dashboard(query, context, user_id):
 #Обработчик ввода номера задачи для вывода статистики по задаче
 async def handler_task_number_stat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Обработчик handler_task_number_stat вызван.")
-    user_id = update.message.from_user.id
-    task_number = update.message.text
+    query = update.callback_query
+    await query.answer()
 
-    logging.info(f"Пользователь {user_id} ввёл номер задачи: {task_number}")
+    user_id = query.from_user.id
+    task_id = int(query.data.split("_")[1])
 
-    # Проверяем, что введённое значение — число
-    if not task_number.isdigit():
-        logging.warning(f"Пользователь {user_id} ввёл некорректный номер задачи: {task_number}")
-        await update.message.reply_text("Пожалуйста, введи номер задачи числом.")
-        return State.WAITING_FOR_TASK_NUMBER
-
-    task_number = int(task_number)
-
-    # Получаем список задач
+    # Находим задачу по task_id
     tasks = get_tasks(user_id)
+    task = next((task for task in tasks if task["id"] == task_id), None)
 
-    # Проверяем, существует ли задача с таким номером
-    if task_number < 1 or task_number > len(tasks):
-        logging.warning(f"Пользователь {user_id} ввёл несуществующий номер задачи: {task_number}")
-        await update.message.reply_text("Задачи с таким номером не существует.")
-        return State.WAITING_FOR_TASK_NUMBER
+    # Клавиатура для кнопки назад
+    keyboard = [[InlineKeyboardButton("Назад", callback_data='stats')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Выводим статистику
-    task_id = tasks[task_number - 1]['id']
+    #Получаем статистику
     stat = get_task_stat_last_7_days(user_id, task_id)
     stat_daily = get_stat_task_daily_day(user_id, task_id)
 
@@ -373,10 +372,19 @@ async def handler_task_number_stat(update: Update, context: ContextTypes.DEFAULT
     )
 
     logging.info(f"Статистика для задачи {task_id} пользователя {user_id}: {stat}")
-    await update.message.reply_text(
-        f'📈Статистика по задаче "{tasks[task_number - 1]["name"]}" за последние 7 дней:\n'
+    await query.edit_message_text(
+        f'📈Статистика по задаче "{task["name"]}" за последние 7 дней:\n'
         f'Общее активное время: {stat["total_time_task"]}\n'
         f'Cреднее активное время: {stat["avg_time_task"]}\n\n'
-        f'Статистика по дням:\n{days_info}')
+        f'Статистика по дням:\n{days_info}', reply_markup=reply_markup)
 
+    return ConversationHandler.END
+#Обработчик кнопки отмена выбора задачи для вывода статистики
+
+async def cancel_stat_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()  # Подтверждаем нажатие кнопки
+
+    # Возвращаем пользователя в меню статистики
+    await stats_handler(update, context)
     return ConversationHandler.END

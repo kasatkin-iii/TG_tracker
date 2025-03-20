@@ -8,7 +8,7 @@ from handlers import (
     State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_for_deletion,
     list_tasks_handler, help_handler, start_session_handler, receive_task_for_start_session,
     stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat,
-    menu_handler, back_menu_handler, cancel_handler, cancel_start_handler)
+    menu_handler, back_menu_handler, cancel_handler, cancel_start_handler, cancel_stat_task_handler)
 
 # Настройка логирования
 logging.basicConfig(
@@ -67,7 +67,9 @@ if __name__ == '__main__':
         entry_points=[CallbackQueryHandler(handle_stats_selection, pattern='^total_stat_task_7$')],
         states={
             State.WAITING_FOR_TASK_NUMBER: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handler_task_number_stat)],
+                CallbackQueryHandler(handler_task_number_stat, pattern=r"^stat_\d+$"),
+                CallbackQueryHandler(cancel_stat_task_handler, pattern="stat"),
+            ],
         },
         fallbacks=[],
         name='stats_task_conv',  # Имя для логирования
