@@ -318,32 +318,66 @@ async def handle_stats_selection(update: Update, context: ContextTypes.DEFAULT_T
 
 #Обработчик вывода графиков статистики
 async def _handle_dashboard(query, context, user_id):
-    """Обрабатывает запрос на генерацию и отправку дашборда."""
+   #Обрабатывает запрос на генерацию и отправку дашборда.
     try:
-        # Уведомляем пользователя о начале генерации
-        await query.answer("⏳ Генерация дашборда...")
+        await query.delete_message()
+        generating_message = await context.bot.send_message(
+            chat_id=user_id,
+            text="⏳ Генерация дашборда..."
+        )
         # Генерируем графики
         images = generate_dashboard(user_id)
         if images:
+
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Назад", callback_data='cancel_dashboard')]
+            ])
             # Отправляем изображения пользователю
-            for img_bytes in images:
-                await context.bot.send_photo(
-                    chat_id=user_id,
-                    photo=img_bytes,
-                    caption="Ваша статистика за последние 7 дней"
-                )
-                img_bytes.close()  # Закрываем байтовый объект
+            await context.bot.send_photo(
+                chat_id=user_id,
+                photo=images,
+                caption="Ваша статистика за последние 7 дней",
+                reply_markup = keyboard
+            )
+            images.close()  # Закрываем байтовый объект
+            await generating_message.delete()
+
         else:
             await context.bot.send_message(
                 chat_id=user_id,
                 text="😞 Недостаточно данных для построения отчета.\nПора начинать учиться!"
             )
+            await generating_message.delete()
+
     except Exception as e:
         logging.error(f"Ошибка при генерации дашборда для пользователя {user_id}: {e}")
         await context.bot.send_message(
             chat_id=user_id,
             text="⚠️ Произошла ошибка при генерации дашборда. Попробуйте позже."
         )
+        await generating_message.delete()
+
+async def cancel_dashboard_handler(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    # Удаляем сообщение с дашбордом
+    await query.delete_message()
+
+    # Создаём новое меню статистики
+    keyboard = [
+        [InlineKeyboardButton('Общая статистика за 7 дней', callback_data='total_stat_7')],
+        [InlineKeyboardButton('Статистика по задаче за 7 дней', callback_data='total_stat_task_7')],
+        [InlineKeyboardButton('📊 Открыть дашборд', callback_data='open_dashboard')],
+        [InlineKeyboardButton('Назад', callback_data='back_menu')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Выберите тип статистики:",
+        reply_markup=reply_markup
+    )
 
 #Обработчик ввода номера задачи для вывода статистики по задаче
 async def handler_task_number_stat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -379,8 +413,8 @@ async def handler_task_number_stat(update: Update, context: ContextTypes.DEFAULT
         f'Статистика по дням:\n{days_info}', reply_markup=reply_markup)
 
     return ConversationHandler.END
-#Обработчик кнопки отмена выбора задачи для вывода статистики
 
+#Обработчик кнопки отмена выбора задачи для вывода статистики
 async def cancel_stat_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()  # Подтверждаем нажатие кнопки

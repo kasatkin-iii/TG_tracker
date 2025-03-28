@@ -8,7 +8,8 @@ from handlers import (
     State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_for_deletion,
     list_tasks_handler, help_handler, start_session_handler, receive_task_for_start_session,
     stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat,
-    menu_handler, back_menu_handler, cancel_handler, cancel_start_handler, cancel_stat_task_handler)
+    menu_handler, back_menu_handler, cancel_handler, cancel_start_handler, cancel_stat_task_handler,
+    cancel_dashboard_handler,)
 
 # Настройка логирования
 logging.basicConfig(
@@ -88,6 +89,7 @@ if __name__ == '__main__':
     application.add_handler(start_session_conv)
     application.add_handler(CallbackQueryHandler(stats_handler, pattern='stats'))
     application.add_handler(CallbackQueryHandler(back_menu_handler, pattern='back_menu'))
+    application.add_handler(CallbackQueryHandler(cancel_dashboard_handler, pattern='cancel_dashboard'))
     application.add_handler(MessageHandler(filters.Text('⏹️'), stop_session_handler))
     application.add_handler(MessageHandler(filters.Text('🔄'), active_session_handler))
     application.add_handler(MessageHandler(filters.Text('⚙️'), menu_handler))
