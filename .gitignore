@@ -1,3 +1,5 @@
-config.py
-time_tracker.db
+app/config.py
+data/time_tracker.db
+app/.dockerignore
+.venv
 __pycache__/

@@ -1,13 +1,13 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler, CallbackContext
-from database import(
+from telegram.ext import ContextTypes, ConversationHandler
+from app.database import(
     add_task, delete_task, get_tasks, start_session, stop_session,
     get_active_session, get_total_stat_last_7_days, get_stat_daily_day,
     get_task_stat_last_7_days, get_stat_task_daily_day
 )
 from enum import Enum, auto
-from dashboard import generate_dashboard
+from app.dashboard import generate_dashboard
 
 # Настройка логирования
 logging.basicConfig(

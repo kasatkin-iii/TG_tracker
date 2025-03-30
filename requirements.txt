@@ -1,0 +1,7 @@
+# Основная библиотека для бота
+python-telegram-bot
+
+#Для сборки dashboard
+pandas # Для анализа данных (используется в dashboard.py)
+matplotlib # Для графиков
+seaborn # Стили графиков

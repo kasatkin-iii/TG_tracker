@@ -11,7 +11,7 @@ logging.basicConfig(
 
 #Создание/подключение к БД
 def get_db_connections():
-    conn = sqlite3.connect('time_tracker.db') #Создаем или подключаемся к созданной БД
+    conn = sqlite3.connect('data/time_tracker.db') #Создаем или подключаемся к созданной БД
     conn.row_factory = sqlite3.Row #Возвращаем результат запроса в виде словаря
 
     #Включаем внешние ключи

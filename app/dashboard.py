@@ -8,7 +8,7 @@ from io import BytesIO
 
 def get_db_connection():
     """Создает соединение с базой данных."""
-    return sqlite3.connect('time_tracker.db')
+    return sqlite3.connect('../data/time_tracker.db')
 
 
 def get_data(user_id):
