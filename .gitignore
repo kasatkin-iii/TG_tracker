@@ -1,4 +1,3 @@
-app/config.py
 data/time_tracker.db
 app/.dockerignore
 .venv
