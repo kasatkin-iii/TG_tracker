@@ -2,9 +2,9 @@ import logging
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, ConversationHandler, MessageHandler, filters, CallbackQueryHandler
 )
-from app.config import BOT_TOKEN
-from app.database import init_db
-from app.handlers import (
+from config import BOT_TOKEN
+from database import init_db
+from handlers import (
     State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_for_deletion,
     list_tasks_handler, help_handler, start_session_handler, receive_task_for_start_session,
     stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat,

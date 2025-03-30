@@ -1,4 +1,4 @@
 data/time_tracker.db
-app/.dockerignore
+dockerignore
 .venv
 __pycache__/
