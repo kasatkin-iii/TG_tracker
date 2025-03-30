@@ -109,7 +109,7 @@ async def receive_task_for_deletion(update: Update, context: ContextTypes.DEFAUL
     # Удаляем задачу
     delete_task(user_id, task_id)
 
-    await query.edit_message_text(f'Задача "{task['name']}" удалена!❌')
+    await query.edit_message_text(f'Задача "{task["name"]}" удалена!❌')
     return ConversationHandler.END
 
 #Обработчик кнопки "Отмена" для выхода из состояния ожидания данных
