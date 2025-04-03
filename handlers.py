@@ -325,6 +325,7 @@ async def _handle_dashboard(query, context, user_id):
             chat_id=user_id,
             text="⏳ Генерация дашборда..."
         )
+        logging.info("Запущена генерация дашборда")
         # Генерируем графики
         images = generate_dashboard(user_id)
         if images:

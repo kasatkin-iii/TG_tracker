@@ -11,7 +11,7 @@ logging.basicConfig(
 
 #Создание/подключение к БД
 def get_db_connections():
-    conn = sqlite3.connect('data/time_tracker.db') #Создаем или подключаемся к созданной БД
+    conn = sqlite3.connect('/data/time_tracker.db') #Создаем или подключаемся к созданной БД
     conn.row_factory = sqlite3.Row #Возвращаем результат запроса в виде словаря
 
     #Включаем внешние ключи
@@ -26,8 +26,8 @@ def init_db():
     conn = get_db_connections()
     cursor = conn.cursor()
 
-    #Включаем русскую локализацию для Windows, (Linux - locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
-    locale.setlocale(locale.LC_TIME, 'Russian_Russia.1251')
+    #Включаем русскую локализацию для linux, (Windows - locale.setlocale(locale.LC_TIME, 'Russian_Russia.1251')
+    #locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
 
     #Создаем таблицы в БД(если они еще не созданы)
     #Таблица задач tasks
@@ -180,20 +180,16 @@ def get_total_stat_last_7_days(user_id: int):
 
     #Находим общее время за 7 дней
     cursor.execute('''
-        SELECT SUM(strftime('%s', end_time) - strftime('%s', start_time)) AS total_time
+        SELECT COALESCE(SUM(strftime('%s', end_time) - strftime('%s', start_time)),0) AS total_time
         FROM sessions 
         WHERE user_id = ? AND end_time IS NOT NULL AND start_time >= ?
         ''', (user_id, start_date))
     result_total = cursor.fetchone()
     conn.close()
-    if not result_total or result_total['total_time'] is None:
-        return "Нет данных"
+
 
     #Находим среднее время за 7 дней
     result_avg = result_total['total_time']/7
-
-    if not result_avg or result_avg is None:
-        return "Нет данных"
 
     # Создаем словарь для хранения результатов
     results = {}
@@ -267,21 +263,15 @@ def get_task_stat_last_7_days(user_id: int, task_id: int):
 
     # Находим общее время за 7 дней
     cursor.execute('''
-            SELECT SUM(strftime('%s', end_time) - strftime('%s', start_time)) AS total_time_task
+            SELECT COALESCE(SUM(strftime('%s', end_time) - strftime('%s', start_time)),0) AS total_time_task
             FROM sessions 
             WHERE user_id = ? AND end_time IS NOT NULL AND start_time >= ? AND task_id = ?
             ''', (user_id, start_date, task_id))
     result_total = cursor.fetchone()
     conn.close()
 
-    if not result_total or result_total['total_time_task'] is None:
-        return "Нет данных"
-
     # Находим среднее время за 7 дней
     result_avg_task = result_total['total_time_task'] / 7
-
-    if not result_avg_task or result_avg_task is None:
-        return "Нет данных"
 
     # Создаем словарь для хранения результатов
     results = {}
