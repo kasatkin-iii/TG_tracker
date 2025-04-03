@@ -337,7 +337,7 @@ async def _handle_dashboard(query, context, user_id):
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=images,
-                caption="Ваша статистика за последние 7 дней",
+                caption="Дашборд твоей активности готов",
                 reply_markup = keyboard
             )
             images.close()  # Закрываем байтовый объект
