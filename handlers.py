@@ -153,6 +153,13 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(message_text)
 
+#Обработчик команды /about
+async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[InlineKeyboardButton("Почитать о проекте", url="cancel")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(message_text)
+
 # Обработчик команды /start_session
 async def start_session_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
