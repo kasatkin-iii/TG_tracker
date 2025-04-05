@@ -5,7 +5,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from database import init_db
 from handlers import (
-    State, start, add_task_handler, receive_task_name, delete_task_handler, receive_task_for_deletion,
+    State, start, about, add_task_handler, receive_task_name, delete_task_handler, receive_task_for_deletion,
     list_tasks_handler, help_handler, start_session_handler, receive_task_for_start_session,
     stop_session_handler, active_session_handler, stats_handler, handle_stats_selection, handler_task_number_stat,
     menu_handler, back_menu_handler, cancel_handler, cancel_start_handler, cancel_stat_task_handler,
@@ -94,6 +94,7 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.Text('🔄'), active_session_handler))
     application.add_handler(MessageHandler(filters.Text('⚙️'), menu_handler))
     application.add_handler(CallbackQueryHandler(handle_stats_selection))
+    application.add_handler(CommandHandler('about', about))
 
     # Запускаем бота
     application.run_polling()

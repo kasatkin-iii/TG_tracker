@@ -154,11 +154,12 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message_text)
 
 #Обработчик команды /about
-async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("Почитать о проекте", url="cancel")]]
+async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[InlineKeyboardButton("Почитать о проекте", url="https://github.com/kasatkin-iii/TG_tracker/blob/master/README.md")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "Прочитать о боте, посмотреть код можно по ссылке:"
 
-    await update.message.reply_text(message_text)
+    await update.message.reply_text(message_text, reply_markup=reply_markup)
 
 # Обработчик команды /start_session
 async def start_session_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
