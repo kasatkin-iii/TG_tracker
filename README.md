@@ -49,24 +49,7 @@
 ├── Docker # для простого деплоя
 ```
 ### Структура БД
-```python
-erDiagram
-    TASKS ||--o{ SESSIONS : "1:N"
-    TASKS {
-        int id PK
-        int user_id
-        text name
-        datetime created_at
-    }
-    SESSIONS {
-        int id PK
-        int task_id FK
-        datetime start_time
-        datetime end_time
-        bool is_active
-    }
-```
-
+![Диаграмма](/icon/er-d.png) 
 
 ## Функционал:
 | Функция                                | Комментарий                       |

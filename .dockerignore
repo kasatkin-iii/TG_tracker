@@ -5,4 +5,6 @@ __pycache__/
 *.pyd
 .gitignore
 data/
+icon/
+README.md
 
